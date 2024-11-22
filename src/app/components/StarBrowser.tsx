@@ -11,7 +11,6 @@ export default function StarBrowser() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEmpty, setFilterEmpty] = useState(false);
 
-  // Combine the separate arrays into an array of Star objects
   const stars: Star[] = useMemo(() => {
     return data.stars.colors.map((color, index) => ({
       name: data.stars.names[index] || '',
@@ -19,7 +18,6 @@ export default function StarBrowser() {
     }));
   }, []);
 
-  // Filter stars based on search term
   const filteredStars = useMemo(() => {
     return stars.filter(star => {
       const matchesSearch = star.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -53,18 +51,24 @@ export default function StarBrowser() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredStars.map((star, index) => (
-          <div 
+          <a 
             key={index}
-            className="p-4 border rounded shadow"
+            href={star.name ? `https://factorio.com/galaxy/${star.name}` : '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-4 border rounded shadow cursor-pointer"
             style={{
-              backgroundColor: `#${star.color.toString(16).padStart(6, '0')}33`
+              backgroundColor: `#${star.color.toString(16).padStart(6, '0')}33`,
+              textDecoration: 'none',
+              color: 'inherit'
             }}
+            title={star.name}
           >
             <div className="font-bold">{star.name || '<Empty>'}</div>
             <div className="text-sm text-gray-600">
               Color: #{star.color.toString(16).padStart(6, '0')}
             </div>
-          </div>
+          </a>
         ))}
       </div>
 
