@@ -42,7 +42,14 @@ export default function StarBrowser() {
 
   const filteredStars = useMemo(() => {
     return stars.filter(star => {
-      const matchesSearch = star.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchableContent = [
+        star.name,
+        star.user,
+        formatElapsedTime(star.date),
+        `#${star.color.toString(16).padStart(6, '0')}`
+      ].join(' ').toLowerCase();
+
+      const matchesSearch = searchableContent.includes(searchTerm.toLowerCase());
       
       if (filterEmpty) {
         return matchesSearch && star.name !== '';
