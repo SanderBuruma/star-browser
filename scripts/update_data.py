@@ -1,10 +1,168 @@
 import requests
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 import json
 import re
 from pathlib import Path
 import sys
 from datetime import datetime
+import time
+from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
+# Semaphore for rate limiting
+RATE_LIMIT = 10  # Maximum concurrent requests
+semaphore = asyncio.Semaphore(RATE_LIMIT)
+save_lock = threading.Lock()
+last_save_time = 0
+SAVE_INTERVAL = 60  # Save every 60 seconds
+
+async def fetch_star_details_async(session: aiohttp.ClientSession, star_name: str, stars_data: dict, index: int) -> tuple[int, Optional[dict]]:
+    """Fetch details for a single star asynchronously"""
+    base_url = "https://factorio.com/galaxy"
+    
+    try:
+        async with semaphore:  # Rate limit our requests
+            async with session.get(f"{base_url}/{star_name}") as response:
+                if response.status != 200:
+                    print(f"Error {response.status} fetching {star_name}")
+                    return index, None
+                
+                html = await response.text()
+                
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        details = {
+            'seed': None,
+            'time_played': None,
+            'comment': None,
+            'factorio_version': None,
+            'mods': [],
+            'player_count': None,
+            'uploaded': None
+        }
+        
+        # Extract data from the page
+        for dt in soup.find_all('dt'):
+            if 'Seed' in dt.text:
+                details['seed'] = dt.find_next('dd').text.strip()
+            elif 'Time played' in dt.text:
+                details['time_played'] = dt.find_next('dd').text.strip()
+            elif 'Factorio version' in dt.text:
+                details['factorio_version'] = dt.find_next('dd').text.strip()
+            elif 'Player count' in dt.text:
+                details['player_count'] = dt.find_next('dd').text.strip()
+            elif 'Uploaded' in dt.text:
+                details['uploaded'] = dt.find_next('dd').text.strip()
+        
+        comment_elem = soup.find('div', class_='comment')
+        if comment_elem:
+            details['comment'] = comment_elem.text.strip()
+        
+        mods_list = soup.find('ul', class_='mods')
+        if mods_list:
+            details['mods'] = [li.text.strip() for li in mods_list.find_all('li')]
+        
+        return index, details
+        
+    except Exception as e:
+        print(f"Error fetching details for {star_name}: {e}")
+        return index, None
+
+def save_current_progress(data: dict, completed: int, total: int):
+    """Save current progress to data.json"""
+    global last_save_time
+    
+    current_time = time.time()
+    if current_time - last_save_time < SAVE_INTERVAL:
+        return
+    
+    with save_lock:
+        try:
+            script_dir = Path(__file__).parent
+            data_file_path = script_dir.parent / 'src' / 'app' / 'data.json'
+            
+            with open(data_file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            
+            last_save_time = current_time
+            print(f"\nProgress saved: {completed}/{total} stars processed")
+            
+        except Exception as e:
+            print(f"Error saving progress: {e}")
+
+async def fetch_all_star_details(stars_data: dict) -> List[Optional[dict]]:
+    """Fetch details for all stars in parallel"""
+    details = [None] * len(stars_data['names'])
+    completed = 0
+    
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i, name in enumerate(stars_data['names']):
+            if name:  # Only fetch details for named stars
+                task = fetch_star_details_async(session, name, stars_data, i)
+                tasks.append(task)
+        
+        # Process stars in chunks to avoid overwhelming the server
+        chunk_size = 50
+        for i in range(0, len(tasks), chunk_size):
+            chunk = tasks[i:i + chunk_size]
+            results = await asyncio.gather(*chunk)
+            
+            for index, result in results:
+                if result:
+                    details[index] = result
+                    completed += 1
+                    
+                    # Save progress periodically
+                    if completed % 10 == 0:  # Every 10 stars
+                        current_data = {
+                            "stars": {
+                                "names": stars_data.get("names", []),
+                                "colors": stars_data.get("colors", []),
+                                "creation_update": stars_data.get("creation_update", []),
+                                "users": stars_data.get("users", []),
+                                "details": details
+                            }
+                        }
+                        save_current_progress(current_data, completed, len(tasks))
+            
+            # Small delay between chunks
+            await asyncio.sleep(1)
+    
+    return details
+
+def update_data_file(stars_data: dict):
+    """Update the data file with star details"""
+    # Run the async fetch operation
+    details = asyncio.run(fetch_all_star_details(stars_data))
+    
+    # Create the final data structure
+    data = {
+        "stars": {
+            "names": stars_data.get("names", []),
+            "colors": stars_data.get("colors", []),
+            "creation_update": stars_data.get("creation_update", []),
+            "users": stars_data.get("users", []),
+            "details": details
+        }
+    }
+    
+    # Final save
+    script_dir = Path(__file__).parent
+    data_file_path = script_dir.parent / 'src' / 'app' / 'data.json'
+    
+    with open(data_file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    
+    # Print final stats
+    total_details = sum(1 for d in details if d is not None)
+    print(f"\nFinal Statistics:")
+    print(f"Total stars: {len(data['stars']['names'])}")
+    print(f"Stars with details: {total_details}")
+    print(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 def fetch_galaxy_data():
     base_url = "https://factorio.com"
@@ -125,39 +283,6 @@ def extract_stars_data(js_content):
     
     print("Could not find stars data in the JavaScript content")
     sys.exit(1)
-
-def update_data_file(stars_data):
-    # Get the path to data.json relative to this script
-    script_dir = Path(__file__).parent
-    data_file_path = script_dir.parent / 'src' / 'app' / 'data.json'
-    
-    # Create the data structure
-    data = {
-        "stars": {
-            "names": stars_data.get("names", []),
-            "colors": stars_data.get("colors", []),
-            "creation_update": stars_data.get("creation_update", []),
-            "users": stars_data.get("users", [])  # Added users
-        }
-    }
-    
-    # Ensure the directory exists
-    data_file_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    try:
-        # Write the data to file with proper formatting
-        with open(data_file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2)
-        print(f"Successfully updated {data_file_path}")
-        
-        # Print some stats
-        print(f"Total stars: {len(data['stars']['names'])}")
-        print(f"Total users: {len(data['stars']['users'])}")  # Added users count
-        print(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
-    except IOError as e:
-        print(f"Error writing to file: {e}")
-        sys.exit(1)
 
 def main():
     print("Fetching data from factorio.com/galaxy...")
