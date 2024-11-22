@@ -3,19 +3,38 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --button-bg: #1a1a1a;
+  --button-hover: #004d40;
+  --button-text: #ededed;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.btn-dark {
+  @apply px-3 py-1 rounded text-gray-300;
+  background-color: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 1px solid #333 !important;
+  transition: all 0.2s ease;
+}
+
+.btn-dark:hover {
+  background-color: var(--button-hover) !important;
+}
+
+/* Override any Tailwind button styles */
+button, .button {
+  background-color: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 1px solid #333 !important;
+}
+
+button:hover, .button:hover {
+  background-color: var(--button-hover) !important;
 }

@@ -116,20 +116,21 @@ export default function StarBrowser() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 font-mono">
       <div className="mb-4 space-y-2">
         <input
           type="text"
-          placeholder="Search by name..."
-          className="w-full p-2 border rounded"
+          placeholder="Search by seed, name, or comment..."
+          className="w-full p-2 bg-[#1a1a1a] border-[#333] border rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#004d40]"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <label className="flex items-center space-x-2">
+        <label className="flex items-center space-x-2 text-gray-300">
           <input
             type="checkbox"
             checked={filterEmpty}
             onChange={(e) => setFilterEmpty(e.target.checked)}
+            className="bg-[#1a1a1a] border-[#333] rounded"
           />
           <span>Hide empty names</span>
         </label>
@@ -142,17 +143,17 @@ export default function StarBrowser() {
             href={star.name ? `https://factorio.com/galaxy/${star.name}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative p-4 border rounded shadow cursor-pointer"
+            className="relative p-4 border border-[#333] rounded shadow-lg hover:border-[#004d40] transition-colors"
             style={{
-              backgroundColor: `#${star.color.toString(16).padStart(6, '0')}33`,
+              backgroundColor: `#${star.color.toString(16).padStart(6, '0')}22`,
               textDecoration: 'none',
               color: 'inherit'
             }}
           >
-            <div className="font-bold">
+            <div className="font-bold text-gray-100">
               {star.details?.seed || star.name || '<Empty>'}
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-400">
               <div>Finished: {formatElapsedTime(star.date)}</div>
               {star.user && <div>By: {star.user}</div>}
               {star.details?.time_played && (
@@ -165,7 +166,7 @@ export default function StarBrowser() {
                       handleCommentClick(e, star.details.comment);
                     }
                   }}
-                  className="mt-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  className="btn-dark mt-2 text-xs"
                 >
                   View Comment
                 </button>
@@ -178,16 +179,16 @@ export default function StarBrowser() {
       {/* Comment Modal */}
       {selectedComment && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
           onClick={handleCloseComment}
         >
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="text-gray-800 whitespace-pre-wrap">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="text-gray-300 whitespace-pre-wrap">
               {selectedComment}
             </div>
             <button
               onClick={() => setSelectedComment(null)}
-              className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded w-full"
+              className="btn-dark mt-4 w-full"
             >
               Close
             </button>
@@ -195,7 +196,7 @@ export default function StarBrowser() {
         </div>
       )}
 
-      <div className="mt-4 text-gray-600">
+      <div className="mt-4 text-gray-400">
         Showing {filteredStars.length} of {stars.length} stars
       </div>
     </div>

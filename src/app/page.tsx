@@ -8,7 +8,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold">Factorio Galaxy Database</h1>
         <Link 
           href="/stats" 
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="btn-dark px-4 py-2"
         >
           View Statistics
         </Link>
