@@ -6,6 +6,7 @@ interface Star {
   name: string;
   color: number;
   date: string;
+  user: string;
 }
 
 export default function StarBrowser() {
@@ -17,6 +18,7 @@ export default function StarBrowser() {
       name: data.stars.names[index] || '',
       color: color,
       date: data.stars.creation_update[index] || '',
+      user: data.stars.users[index] || '',
     }));
   }, []);
 
@@ -87,6 +89,7 @@ export default function StarBrowser() {
             <div className="font-bold">{star.name || '<Empty>'}</div>
             <div className="text-sm text-gray-600">
               Finished: {formatElapsedTime(star.date)}
+              {star.user && <div>By: {star.user}</div>}
             </div>
           </a>
         ))}

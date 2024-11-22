@@ -94,9 +94,9 @@ def extract_stars_data(js_content):
         r'stars:\s*({[^}]+})',
         r'window\.stars\s*=\s*({[^;]+});',
         r'export\s+const\s+stars\s*=\s*({[^;]+});',
-        r'const\s+data\s*=\s*({[^;]+});',  # Try looking for 'data' instead of 'stars'
-        r'"stars"\s*:\s*({[^}]+})',  # JSON-style pattern
-        r'{\s*"names"\s*:\s*\[[^\]]+\].*"colors"\s*:\s*\[[^\]]+\].*"creation_update"\s*:\s*\[[^\]]+\]}',  # Direct object pattern
+        r'const\s+data\s*=\s*({[^;]+});',
+        r'"stars"\s*:\s*({[^}]+})',
+        r'{\s*"names"\s*:\s*\[[^\]]+\].*"colors"\s*:\s*\[[^\]]+\].*"creation_update"\s*:\s*\[[^\]]+\].*"users"\s*:\s*\[[^\]]+\]}',  # Updated pattern
     ]
     
     for pattern in patterns:
@@ -113,8 +113,8 @@ def extract_stars_data(js_content):
                 print(json_str[:200])
                 
                 stars_data = json.loads(json_str)
-                if all(key in stars_data for key in ['names', 'colors', 'creation_update']):
-                    print("Successfully extracted stars data!")
+                if all(key in stars_data for key in ['names', 'colors', 'creation_update', 'users']):
+                    print("Successfully extracted stars data with users!")
                     return stars_data
                 else:
                     print(f"Found JSON but missing required keys. Keys found: {list(stars_data.keys())}")
@@ -136,7 +136,8 @@ def update_data_file(stars_data):
         "stars": {
             "names": stars_data.get("names", []),
             "colors": stars_data.get("colors", []),
-            "creation_update": stars_data.get("creation_update", [])
+            "creation_update": stars_data.get("creation_update", []),
+            "users": stars_data.get("users", [])  # Added users
         }
     }
     
@@ -151,6 +152,7 @@ def update_data_file(stars_data):
         
         # Print some stats
         print(f"Total stars: {len(data['stars']['names'])}")
+        print(f"Total users: {len(data['stars']['users'])}")  # Added users count
         print(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
     except IOError as e:
