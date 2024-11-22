@@ -5,6 +5,7 @@ import data from '../data.json';
 interface Star {
   name: string;
   color: number;
+  date: string;
 }
 
 export default function StarBrowser() {
@@ -15,8 +16,27 @@ export default function StarBrowser() {
     return data.stars.colors.map((color, index) => ({
       name: data.stars.names[index] || '',
       color: color,
+      date: data.stars.creation_update[index] || '',
     }));
   }, []);
+
+  const formatElapsedTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'today';
+    if (diffInDays === 1) return 'yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    
+    const weeks = Math.floor(diffInDays / 7);
+    const remainingDays = diffInDays % 7;
+    
+    if (remainingDays === 0) {
+      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    }
+    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} and ${remainingDays} ${remainingDays === 1 ? 'day' : 'days'} ago`;
+  };
 
   const filteredStars = useMemo(() => {
     return stars.filter(star => {
@@ -66,7 +86,7 @@ export default function StarBrowser() {
           >
             <div className="font-bold">{star.name || '<Empty>'}</div>
             <div className="text-sm text-gray-600">
-              Color: #{star.color.toString(16).padStart(6, '0')}
+              Finished: {formatElapsedTime(star.date)}
             </div>
           </a>
         ))}
