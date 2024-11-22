@@ -1,12 +1,14 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import data from '../data.json';
+import type { StarDetails } from '../data';
 
 interface Star {
   name: string;
   color: number;
   date: string;
   user: string;
+  details: StarDetails | null;
 }
 
 export default function StarBrowser() {
@@ -19,6 +21,7 @@ export default function StarBrowser() {
       color: color,
       date: data.stars.creation_update[index] || '',
       user: data.stars.users[index] || '',
+      details: data.stars.details[index],
     }));
   }, []);
 
@@ -38,6 +41,24 @@ export default function StarBrowser() {
       return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
     }
     return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} and ${remainingDays} ${remainingDays === 1 ? 'day' : 'days'} ago`;
+  };
+
+  const formatTimePlayed = (timeStr: string | null) => {
+    if (!timeStr) return null;
+    
+    // Parse "HH:MM:SS" format
+    const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+    
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (remainingHours > 0) parts.push(`${remainingHours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+    
+    return parts.join(' ');
   };
 
   const filteredStars = useMemo(() => {
@@ -88,8 +109,11 @@ export default function StarBrowser() {
           >
             <div className="font-bold">{star.name || '<Empty>'}</div>
             <div className="text-sm text-gray-600">
-              Finished: {formatElapsedTime(star.date)}
+              <div>Finished: {formatElapsedTime(star.date)}</div>
               {star.user && <div>By: {star.user}</div>}
+              {star.details?.time_played && (
+                <div>Time: {formatTimePlayed(star.details.time_played)}</div>
+              )}
             </div>
           </a>
         ))}
