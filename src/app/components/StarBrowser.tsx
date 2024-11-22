@@ -14,6 +14,7 @@ interface Star {
 export default function StarBrowser() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEmpty, setFilterEmpty] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<string | null>(null);
 
   const stars: Star[] = useMemo(() => {
     return data.stars.colors.map((color, index) => ({
@@ -72,6 +73,20 @@ export default function StarBrowser() {
     });
   }, [stars, searchTerm, filterEmpty]);
 
+  const handleCommentClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    comment: string
+  ) => {
+    e.preventDefault(); // Prevent the <a> tag from triggering
+    setSelectedComment(comment);
+  };
+
+  const handleCloseComment = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) { // Only close if clicking the backdrop
+      setSelectedComment(null);
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="mb-4 space-y-2">
@@ -99,25 +114,58 @@ export default function StarBrowser() {
             href={star.name ? `https://factorio.com/galaxy/${star.name}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-4 border rounded shadow cursor-pointer"
+            className="relative p-4 border rounded shadow cursor-pointer"
             style={{
               backgroundColor: `#${star.color.toString(16).padStart(6, '0')}33`,
               textDecoration: 'none',
               color: 'inherit'
             }}
-            title={star.name}
           >
-            <div className="font-bold">{star.name || '<Empty>'}</div>
+            <div className="font-bold">
+              {star.details?.seed || star.name || '<Empty>'}
+            </div>
             <div className="text-sm text-gray-600">
               <div>Finished: {formatElapsedTime(star.date)}</div>
               {star.user && <div>By: {star.user}</div>}
               {star.details?.time_played && (
                 <div>Time: {formatTimePlayed(star.details.time_played)}</div>
               )}
+              {star.details?.comment && (
+                <button
+                  onClick={(e) => {
+                    if (star.details && star.details.comment) {
+                      handleCommentClick(e, star.details.comment);
+                    }
+                  }}
+                  className="mt-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                >
+                  View Comment
+                </button>
+              )}
             </div>
           </a>
         ))}
       </div>
+
+      {/* Comment Modal */}
+      {selectedComment && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={handleCloseComment}
+        >
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="text-gray-800 whitespace-pre-wrap">
+              {selectedComment}
+            </div>
+            <button
+              onClick={() => setSelectedComment(null)}
+              className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded w-full"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 text-gray-600">
         Showing {filteredStars.length} of {stars.length} stars

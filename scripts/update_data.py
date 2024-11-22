@@ -25,7 +25,8 @@ async def fetch_star_details_async(session: aiohttp.ClientSession, star_name: st
     
     try:
         async with semaphore:  # Rate limit our requests
-            async with session.get(f"{base_url}/{star_name}") as response:
+            encoded_name = star_name.replace(" ", "%20")
+            async with session.get(f"{base_url}/{encoded_name}") as response:
                 if response.status != 200:
                     print(f"Error {response.status} fetching {star_name}")
                     return index, None
@@ -46,25 +47,45 @@ async def fetch_star_details_async(session: aiohttp.ClientSession, star_name: st
         
         # Extract data from the page
         for dt in soup.find_all('dt'):
-            if 'Seed' in dt.text:
+            text = dt.text.strip()
+            if 'Seed' in text:
                 details['seed'] = dt.find_next('dd').text.strip()
-            elif 'Time played' in dt.text:
+            elif 'Time played' in text:
                 details['time_played'] = dt.find_next('dd').text.strip()
-            elif 'Factorio version' in dt.text:
+            elif 'Factorio version' in text:
                 details['factorio_version'] = dt.find_next('dd').text.strip()
-            elif 'Player count' in dt.text:
+            elif 'Player count' in text:
                 details['player_count'] = dt.find_next('dd').text.strip()
-            elif 'Uploaded' in dt.text:
+            elif 'Uploaded' in text:
                 details['uploaded'] = dt.find_next('dd').text.strip()
         
-        comment_elem = soup.find('div', class_='comment')
-        if comment_elem:
-            details['comment'] = comment_elem.text.strip()
+        # Try to find comment using XPath //dl//p
+        try:
+            # Convert XPath to BeautifulSoup selector
+            comment_p = soup.select('dl p')  # This is equivalent to //dl//p
+            if comment_p:
+                # Get the first paragraph's text
+                details['comment'] = comment_p[0].text.strip()
+            else:
+                # Fallback to previous methods if XPath doesn't find anything
+                comment_elem = soup.find('div', class_='comment')
+                if comment_elem:
+                    details['comment'] = comment_elem.text.strip()
+                else:
+                    comment_section = soup.find('h2', string='Comment')
+                    if comment_section:
+                        comment_text = comment_section.find_next_sibling(string=True)
+                        if comment_text:
+                            details['comment'] = comment_text.strip()
+        except Exception as e:
+            print(f"Error extracting comment for {star_name}: {e}")
         
+        # Get mods list
         mods_list = soup.find('ul', class_='mods')
         if mods_list:
             details['mods'] = [li.text.strip() for li in mods_list.find_all('li')]
         
+        print(f"Found details for {star_name}: {details['comment']}")
         return index, details
         
     except Exception as e:
