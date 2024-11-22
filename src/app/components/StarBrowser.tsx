@@ -62,16 +62,44 @@ export default function StarBrowser() {
     return parts.join(' ');
   };
 
+  // Create an index of searchable content when stars are loaded
+  const searchIndex = useMemo(() => {
+    return stars.map(star => ({
+      searchContent: [
+        star.name,
+        star.user,
+        star.details?.seed || '',
+        star.details?.comment || '',
+        formatTimePlayed(star.details?.time_played || '') || '',
+        formatElapsedTime(star.date)
+      ].join(' ').toLowerCase(),
+      star
+    }));
+  }, [stars]);
+
   const filteredStars = useMemo(() => {
-    return stars.filter(star => {
-      const matchesSearch = star.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (filterEmpty) {
-        return matchesSearch && star.name !== '';
-      }
-      return matchesSearch;
-    });
-  }, [stars, searchTerm, filterEmpty]);
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Quick return if no search term and no filter
+    if (!searchTerm && !filterEmpty) {
+      return stars;
+    }
+    
+    // Quick return if only showing non-empty names
+    if (!searchTerm && filterEmpty) {
+      return stars.filter(star => star.name !== '');
+    }
+
+    return searchIndex
+      .filter(({ searchContent, star }) => {
+        const matchesSearch = searchContent.includes(searchLower);
+        if (filterEmpty) {
+          return matchesSearch && star.name !== '';
+        }
+        return matchesSearch;
+      })
+      .map(({ star }) => star);
+  }, [searchIndex, searchTerm, filterEmpty]);
 
   const handleCommentClick = (
     e: React.MouseEvent<HTMLButtonElement>,
