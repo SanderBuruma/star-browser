@@ -16,6 +16,9 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Factorio Galaxy Database",
   description: "Browse and search the Factorio Galaxy stars database",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
