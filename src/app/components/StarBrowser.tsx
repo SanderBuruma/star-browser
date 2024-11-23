@@ -117,11 +117,11 @@ export default function StarBrowser() {
 
   return (
     <div className="p-4 font-mono">
-      <div className="mb-4 space-y-2">
+      <div className="panel p-4 mb-4 space-y-2">
         <input
           type="text"
           placeholder="Search by seed, name, or comment..."
-          className="w-full p-2 bg-[#1a1a1a] border-[#333] border rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#004d40]"
+          className="input w-full"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -130,7 +130,7 @@ export default function StarBrowser() {
             type="checkbox"
             checked={filterEmpty}
             onChange={(e) => setFilterEmpty(e.target.checked)}
-            className="bg-[#1a1a1a] border-[#333] rounded"
+            className="bg-black/60 border-[#444] rounded"
           />
           <span>Hide empty names</span>
         </label>
@@ -143,11 +143,9 @@ export default function StarBrowser() {
             href={star.name ? `https://factorio.com/galaxy/${star.name}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative p-4 border border-[#333] rounded shadow-lg hover:border-[#004d40] transition-colors"
+            className="card p-4"
             style={{
               backgroundColor: `#${star.color.toString(16).padStart(6, '0')}22`,
-              textDecoration: 'none',
-              color: 'inherit'
             }}
           >
             <div className="font-bold text-gray-100">
@@ -179,10 +177,10 @@ export default function StarBrowser() {
       {/* Comment Modal */}
       {selectedComment && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
           onClick={handleCloseComment}
         >
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+          <div className="panel p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="text-gray-300 whitespace-pre-wrap">
               {selectedComment}
             </div>

@@ -4,15 +4,15 @@ import StarBrowser from './components/StarBrowser';
 export default function Home() {
   return (
     <main>
-      <div className="p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Factorio Galaxy Database</h1>
+      <nav className="nav-header">
+        <h1 className="text-2xl font-bold text-[#FF9F1C]">Factorio Galaxy Database</h1>
         <Link 
           href="/stats" 
-          className="btn-dark px-4 py-2"
+          className="btn-dark"
         >
           View Statistics
         </Link>
-      </div>
+      </nav>
       <StarBrowser />
     </main>
   );
