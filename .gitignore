@@ -38,3 +38,5 @@ venv/
 *.html
 debug_*
 data.json
+
+*.log

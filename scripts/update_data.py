@@ -11,6 +11,7 @@ import time
 from typing import List, Dict, Optional
 from concurrent.futures import ThreadPoolExecutor
 import threading
+from copy import deepcopy
 
 # Semaphore for rate limiting
 RATE_LIMIT = 10  # Maximum concurrent requests
@@ -155,34 +156,91 @@ async def fetch_all_star_details(stars_data: dict) -> List[Optional[dict]]:
     
     return details
 
-def update_data_file(stars_data: dict):
-    """Update the data file with star details"""
-    # Run the async fetch operation
-    details = asyncio.run(fetch_all_star_details(stars_data))
+def load_existing_data() -> dict:
+    """Load existing data from data.json if it exists"""
+    script_dir = Path(__file__).parent
+    data_file_path = script_dir.parent / 'src' / 'app' / 'data.json'
     
-    # Create the final data structure
-    data = {
-        "stars": {
-            "names": stars_data.get("names", []),
-            "colors": stars_data.get("colors", []),
-            "creation_update": stars_data.get("creation_update", []),
-            "users": stars_data.get("users", []),
-            "details": details
-        }
-    }
+    if data_file_path.exists():
+        try:
+            with open(data_file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print("Warning: Existing data.json was invalid")
     
-    # Final save
+    return {"stars": {"names": [], "colors": [], "creation_update": [], "users": [], "details": []}}
+
+def update_data_file(new_stars_data: dict):
+    """Update the data file with star details, preserving existing data"""
+    # Load existing data
+    existing_data = load_existing_data()
+    
+    # Create sets for efficient lookup
+    existing_names = set(existing_data["stars"]["names"])
+    new_names = set(new_stars_data["names"])
+    
+    # Find new stars to add
+    stars_to_add = new_names - existing_names
+    stars_to_add_indices = [i for i, name in enumerate(new_stars_data["names"]) if name in stars_to_add]
+    
+    # Find existing stars that need details
+    existing_indices_needing_details = [
+        i for i, (name, details) in enumerate(zip(existing_data["stars"]["names"], existing_data["stars"]["details"]))
+        if details is None and name is not None
+    ]
+    
+    if not stars_to_add_indices and not existing_indices_needing_details:
+        print("No new stars to add and no missing details to fetch.")
+        return
+    
+    # Add new stars to existing data
+    for idx in stars_to_add_indices:
+        existing_data["stars"]["names"].append(new_stars_data["names"][idx])
+        existing_data["stars"]["colors"].append(new_stars_data["colors"][idx])
+        existing_data["stars"]["creation_update"].append(new_stars_data["creation_update"][idx])
+        existing_data["stars"]["users"].append(new_stars_data["users"][idx])
+        existing_data["stars"]["details"].append(None)  # Details will be fetched later
+    
+    # Create a list of stars that need details fetched
+    stars_to_process = []
+    indices_map = []
+    
+    # Add new stars that need details
+    for idx in stars_to_add_indices:
+        stars_to_process.append(new_stars_data["names"][idx])
+        indices_map.append(len(existing_data["stars"]["names"]) - len(stars_to_add_indices) + stars_to_add_indices.index(idx))
+    
+    # Add existing stars that need details
+    for idx in existing_indices_needing_details:
+        stars_to_process.append(existing_data["stars"]["names"][idx])
+        indices_map.append(idx)
+    
+    if stars_to_process:
+        print(f"Fetching details for {len(stars_to_process)} stars...")
+        # Create a temporary stars_data structure for the fetch operation
+        temp_stars_data = {"names": stars_to_process}
+        details = asyncio.run(fetch_all_star_details(temp_stars_data))
+        
+        # Update the details in the existing data
+        for temp_idx, real_idx in enumerate(indices_map):
+            if details[temp_idx] is not None:
+                existing_data["stars"]["details"][real_idx] = details[temp_idx]
+    
+    # Save the updated data
     script_dir = Path(__file__).parent
     data_file_path = script_dir.parent / 'src' / 'app' / 'data.json'
     
     with open(data_file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2)
+        json.dump(existing_data, f, indent=2)
     
     # Print final stats
-    total_details = sum(1 for d in details if d is not None)
+    total_stars = len(existing_data["stars"]["names"])
+    total_details = sum(1 for d in existing_data["stars"]["details"] if d is not None)
     print(f"\nFinal Statistics:")
-    print(f"Total stars: {len(data['stars']['names'])}")
+    print(f"Total stars: {total_stars}")
     print(f"Stars with details: {total_details}")
+    print(f"New stars added: {len(stars_to_add)}")
+    print(f"Details fetched: {len(stars_to_process)}")
     print(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 def fetch_galaxy_data():
@@ -316,4 +374,4 @@ def main():
     update_data_file(stars_data)
 
 if __name__ == "__main__":
-    main() 
+    main()
